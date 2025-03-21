@@ -81,7 +81,7 @@ ___TEMPLATE_PARAMETERS___
     "name": "overrideDl",
     "checkboxText": "Override Data Layer Name",
     "simpleValueType": true,
-    "help": "With this setting, you can define your own dataLayer name instead of using the default dataLayer object. Please make sure that this name exactly matches your implementation."
+    "help": "With this setting, you can define your own Data Layer name instead of using the default dataLayer object. Please make sure that this name exactly matches your implementation."
   },
   {
     "type": "TEXT",
