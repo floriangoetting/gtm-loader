@@ -78,11 +78,32 @@ ___TEMPLATE_PARAMETERS___
   },
   {
     "type": "CHECKBOX",
+    "name": "overrideDl",
+    "checkboxText": "Override Data Layer Name",
+    "simpleValueType": true,
+    "help": "With this setting, you can define your own dataLayer name instead of using the default dataLayer object. Please make sure that this name exactly matches your implementation."
+  },
+  {
+    "type": "TEXT",
+    "name": "dataLayerName",
+    "displayName": "Data Layer Name",
+    "simpleValueType": true,
+    "enablingConditions": [
+      {
+        "paramName": "overrideDl",
+        "paramValue": true,
+        "type": "EQUALS"
+      }
+    ],
+    "defaultValue": "dataLayer"
+  },
+  {
+    "type": "CHECKBOX",
     "name": "encodingHeader",
     "checkboxText": "Set Encoding Header (Recommended for Cloud Run)",
     "simpleValueType": true,
     "help": "If you check this, a \"Content-Encoding\" header with the value \"gzip\" will be set in the response back to the browser."
-  },  
+  },
   {
     "type": "TEXT",
     "name": "allowedOrigins",
@@ -105,6 +126,7 @@ const claimRequest = require('claimRequest');
 const getRequestHeader = require('getRequestHeader');
 const getRequestPath = require('getRequestPath');
 const getRequestQueryParameters = require('getRequestQueryParameters');
+const getRequestQueryString = require('getRequestQueryString');
 const getTimestampMillis = require('getTimestampMillis');
 const logToConsole = require('logToConsole');
 const parseUrl = require('parseUrl');
@@ -117,6 +139,7 @@ const templateDataStorage = require('templateDataStorage');
 
 const requestPath = getRequestPath();
 const requestParams = getRequestQueryParameters();
+const requestQueryString = getRequestQueryString();
 
 const origin = getRequestHeader('origin') || (!!getRequestHeader('referer') && parseUrl(getRequestHeader('referer')).origin) || requestParams.origin;
 const approvedResponseHeaders = ['last-modified', 'cache-control', 'content-type', 'vary', 'alt-svc', 'server', 'content-encoding'];
@@ -126,15 +149,14 @@ const cacheMaxTimeInMs = 450000;
 const containerId = data.containerId || requestParams.id || '';
 
 // Preview parameters
-const gtm_auth = requestParams.gtm_auth;
 const gtm_debug = requestParams.gtm_debug;
-const gtm_preview = requestParams.gtm_preview;
-const previewRequest = !!(gtm_auth && gtm_debug && gtm_preview);
+const previewRequest = !!(gtm_debug);
 
-const dataLayerVariableNameParameter = requestParams.l ? '&l=' + requestParams.l : '';
+const requestParamsString = requestQueryString === '' ? '' : '&' + requestQueryString;
+const dataLayerVariableNameParameter = data.overrideDl ? '&l=' + data.dataLayerName : '';
 
 // Set names for storage
-const storedJs = 'gtm_js_' + containerId + (requestParams.l ? '_' + requestParams.l : '');
+const storedJs = 'gtm_js_' + containerId + (data.overrideDl ? '_' + data.dataLayerName : '');
 const storedHeaders = storedJs + '_headers';
 const storedTimeout = storedJs + '_timeout';
 
@@ -163,7 +185,7 @@ const sendResponse = (response, headers, statusCode) => {
 
 const fetchPreviewContainer = () => {
   log('Fetching preview container for ' + containerId);
-  sendHttpGet(httpEndpoint + '&id=' + containerId + '&gtm_auth=' + gtm_auth + '&gtm_debug=' + gtm_debug + '&gtm_preview=' + gtm_preview + dataLayerVariableNameParameter, (statusCode, headers, body) => {
+  sendHttpGet(httpEndpoint + '&id=' + containerId + requestParamsString + dataLayerVariableNameParameter, (statusCode, headers, body) => {
     sendResponse(body, headers, statusCode);
   }, {timeout: 1500});
 };
@@ -174,7 +196,7 @@ const fetchLiveContainer = () => {
   if (!templateDataStorage.getItemCopy(storedJs) || 
       templateDataStorage.getItemCopy(storedTimeout) < storageTimeout) {
     log('Fetching live container from GTM servers for ' + containerId);
-    sendHttpGet(httpEndpoint + '&id=' + containerId + dataLayerVariableNameParameter, (statusCode, headers, body) => {
+    sendHttpGet(httpEndpoint + '&id=' + containerId + requestParamsString + dataLayerVariableNameParameter, (statusCode, headers, body) => {
       if (statusCode === 200) {
         templateDataStorage.setItemCopy(storedJs, body);
         templateDataStorage.setItemCopy(storedHeaders, headers);
