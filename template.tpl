@@ -95,7 +95,11 @@ ___TEMPLATE_PARAMETERS___
         "type": "EQUALS"
       }
     ],
-    "defaultValue": "dataLayer"
+    "valueValidators": [
+      {
+        "type": "NON_EMPTY"
+      }
+    ]
   },
   {
     "type": "CHECKBOX",
@@ -126,7 +130,6 @@ const claimRequest = require('claimRequest');
 const getRequestHeader = require('getRequestHeader');
 const getRequestPath = require('getRequestPath');
 const getRequestQueryParameters = require('getRequestQueryParameters');
-const getRequestQueryString = require('getRequestQueryString');
 const getTimestampMillis = require('getTimestampMillis');
 const logToConsole = require('logToConsole');
 const parseUrl = require('parseUrl');
@@ -139,24 +142,27 @@ const templateDataStorage = require('templateDataStorage');
 
 const requestPath = getRequestPath();
 const requestParams = getRequestQueryParameters();
-const requestQueryString = getRequestQueryString();
 
 const origin = getRequestHeader('origin') || (!!getRequestHeader('referer') && parseUrl(getRequestHeader('referer')).origin) || requestParams.origin;
 const approvedResponseHeaders = ['last-modified', 'cache-control', 'content-type', 'vary', 'alt-svc', 'server', 'content-encoding'];
 
 // Set max template storage cache to half of GTM container cache
 const cacheMaxTimeInMs = 450000;
+
+//get container ID and data layer name
 const containerId = data.containerId || requestParams.id || '';
+const dataLayerName = data.dataLayerName || requestParams.l || '';
+const dataLayerNameParameter = dataLayerName !== '' ? '&l=' + dataLayerName : '';
 
-// Preview parameters
-const gtm_debug = requestParams.gtm_debug;
-const previewRequest = !!(gtm_debug);
-
-const requestParamsString = requestQueryString === '' ? '' : '&' + requestQueryString;
-const dataLayerVariableNameParameter = data.overrideDl ? '&l=' + data.dataLayerName : '';
+// Preview and environment parameters
+const authParameter = requestParams.gtm_auth ? '&gtm_auth=' + requestParams.gtm_auth : '';
+const debugParameter = requestParams.gtm_debug ? '&gtm_debug=' + requestParams.gtm_debug : '';
+const previewParameter = requestParams.gtm_preview ? '&gtm_preview=' + requestParams.gtm_preview : '';
+const cookiesWinParameter = requestParams.gtm_cookies_win ? '&gtm_cookies_win=' + requestParams.gtm_cookies_win : '';
+const previewRequest = !!(requestParams.gtm_debug);
 
 // Set names for storage
-const storedJs = 'gtm_js_' + containerId + (data.overrideDl ? '_' + data.dataLayerName : '');
+const storedJs = 'gtm_js_' + containerId + ((data.dataLayerName || requestParams.l) ? '_' + dataLayerName : '');
 const storedHeaders = storedJs + '_headers';
 const storedTimeout = storedJs + '_timeout';
 
@@ -185,7 +191,7 @@ const sendResponse = (response, headers, statusCode) => {
 
 const fetchPreviewContainer = () => {
   log('Fetching preview container for ' + containerId);
-  sendHttpGet(httpEndpoint + '&id=' + containerId + requestParamsString + dataLayerVariableNameParameter, (statusCode, headers, body) => {
+  sendHttpGet(httpEndpoint + '&id=' + containerId + authParameter + debugParameter + previewParameter + dataLayerNameParameter, (statusCode, headers, body) => {
     sendResponse(body, headers, statusCode);
   }, {timeout: 1500});
 };
@@ -196,7 +202,7 @@ const fetchLiveContainer = () => {
   if (!templateDataStorage.getItemCopy(storedJs) || 
       templateDataStorage.getItemCopy(storedTimeout) < storageTimeout) {
     log('Fetching live container from GTM servers for ' + containerId);
-    sendHttpGet(httpEndpoint + '&id=' + containerId + requestParamsString + dataLayerVariableNameParameter, (statusCode, headers, body) => {
+    sendHttpGet(httpEndpoint + '&id=' + containerId + authParameter + previewParameter + cookiesWinParameter + dataLayerNameParameter, (statusCode, headers, body) => {
       if (statusCode === 200) {
         templateDataStorage.setItemCopy(storedJs, body);
         templateDataStorage.setItemCopy(storedHeaders, headers);
