@@ -159,10 +159,10 @@ const authParameter = requestParams.gtm_auth ? '&gtm_auth=' + requestParams.gtm_
 const debugParameter = requestParams.gtm_debug ? '&gtm_debug=' + requestParams.gtm_debug : '';
 const previewParameter = requestParams.gtm_preview ? '&gtm_preview=' + requestParams.gtm_preview : '';
 const cookiesWinParameter = requestParams.gtm_cookies_win ? '&gtm_cookies_win=' + requestParams.gtm_cookies_win : '';
-const previewRequest = !!(requestParams.gtm_debug);
+const previewRequest = !!(requestParams.gtm_auth && requestParams.gtm_debug && requestParams.gtm_preview);
 
 // Set names for storage
-const storedJs = 'gtm_js_' + containerId + ((data.dataLayerName || requestParams.l) ? '_' + dataLayerName : '');
+const storedJs = 'gtm_js_' + containerId + (dataLayerName !== '' ? '_' + dataLayerName : '');
 const storedHeaders = storedJs + '_headers';
 const storedTimeout = storedJs + '_timeout';
 
