@@ -159,7 +159,7 @@ const authParameter = requestParams.gtm_auth ? '&gtm_auth=' + requestParams.gtm_
 const debugParameter = requestParams.gtm_debug ? '&gtm_debug=' + requestParams.gtm_debug : '';
 const previewParameter = requestParams.gtm_preview ? '&gtm_preview=' + requestParams.gtm_preview : '';
 const cookiesWinParameter = requestParams.gtm_cookies_win ? '&gtm_cookies_win=' + requestParams.gtm_cookies_win : '';
-const previewRequest = !!(requestParams.gtm_auth && requestParams.gtm_debug && requestParams.gtm_preview);
+const previewRequest = !!(requestParams.gtm_auth || requestParams.gtm_debug || requestParams.gtm_preview);
 
 // Set names for storage
 const storedJs = 'gtm_js_' + containerId + (dataLayerName !== '' ? '_' + dataLayerName : '');
@@ -191,7 +191,7 @@ const sendResponse = (response, headers, statusCode) => {
 
 const fetchPreviewContainer = () => {
   log('Fetching preview container for ' + containerId);
-  sendHttpGet(httpEndpoint + '&id=' + containerId + authParameter + debugParameter + previewParameter + dataLayerNameParameter, (statusCode, headers, body) => {
+  sendHttpGet(httpEndpoint + '&id=' + containerId + authParameter + debugParameter + previewParameter + cookiesWinParameter + dataLayerNameParameter, (statusCode, headers, body) => {
     sendResponse(body, headers, statusCode);
   }, {timeout: 1500});
 };
@@ -202,7 +202,7 @@ const fetchLiveContainer = () => {
   if (!templateDataStorage.getItemCopy(storedJs) || 
       templateDataStorage.getItemCopy(storedTimeout) < storageTimeout) {
     log('Fetching live container from GTM servers for ' + containerId);
-    sendHttpGet(httpEndpoint + '&id=' + containerId + authParameter + previewParameter + cookiesWinParameter + dataLayerNameParameter, (statusCode, headers, body) => {
+    sendHttpGet(httpEndpoint + '&id=' + containerId + dataLayerNameParameter, (statusCode, headers, body) => {
       if (statusCode === 200) {
         templateDataStorage.setItemCopy(storedJs, body);
         templateDataStorage.setItemCopy(storedHeaders, headers);
